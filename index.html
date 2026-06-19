@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bir Su Damlasının Yolculuğu</title>
+  
+  <script>
+    window.addEventListener('error', function(e) {
+      const errBox = document.createElement('div');
+      errBox.style = "position:absolute; top:0; left:0; width:100vw; background:red; color:white; z-index:99999; padding:20px; font-size:18px;";
+      errBox.innerHTML = "<b>JS HATASI:</b> " + e.message + " <br><b>Satır:</b> " + e.lineno + " <br><b>Dosya:</b> " + e.filename;
+      document.body.appendChild(errBox);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const errBox = document.createElement('div');
+      errBox.style = "position:absolute; top:50px; left:0; width:100vw; background:orange; color:black; z-index:99999; padding:20px; font-size:18px;";
+      errBox.innerHTML = "<b>PROMISE HATASI:</b> " + (e.reason && e.reason.message ? e.reason.message : e.reason);
+      document.body.appendChild(errBox);
+    });
+  </script>
+  
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Polyfill for older browsers that don't support import maps -->
+  <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
+  
+  <!-- Import map for Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./lib/three.module.js",
+        "three/addons/webxr/VRButton.js": "./lib/VRButton.js",
+        "three/addons/controls/OrbitControls.js": "./lib/OrbitControls.js"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="overlay screen active">
+    <div class="content-box">
+      <h1>Bir Su Damlasının Yolculuğu</h1>
+      <h2 class="sub-heading">VR Destekli Etkileşimli Su Döngüsü Simülasyonu</h2>
+      <p>Bu simülasyon, su molekülünün doğadaki döngüsünü faz değişimi, enerji aktarımı, yoğuşma, yağış, yüzey akışı ve sızma süreçleriyle lise düzeyinde incelemek için tasarlanmıştır.</p>
+      <div class="btn-group-grid">
+        <button id="start-btn" class="primary-btn">Simülasyonu Başlat</button>
+        <button id="vr-btn" class="secondary-btn">VR Moduna Geç</button>
+        <button id="kazanimlar-btn" class="outline-btn">Bilimsel Kazanımlar</button>
+        <button id="direct-quiz-btn" class="outline-btn">Mini Quiz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kazanımlar Modal -->
+  <div id="kazanimlar-modal" class="overlay hidden">
+    <div class="modal-box">
+      <h2>Bilimsel Kazanımlar</h2>
+      <ul class="kazanim-list">
+        <li>Maddenin hal değişimlerini (buharlaşma, yoğuşma) termodinamik açıdan açıklar.</li>
+        <li>Isı ve sıcaklık kavramlarını, moleküllerin kinetik enerjisi üzerinden modellendirir.</li>
+        <li>Yerçekimi kuvvetinin yağış mekanizmasındaki etkisini kavrar.</li>
+        <li>Su döngüsünün ekosistem ve iklim sistemlerindeki düzenleyici rolünü analiz eder.</li>
+      </ul>
+      <button id="close-kazanimlar-btn" class="primary-btn mt-20">Kapat</button>
+    </div>
+  </div>
+
+  <!-- Main UI Overlay (Visible during the journey) -->
+  <div id="main-ui" class="overlay hidden">
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress-step" id="step-0">Su Rezervuarı</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="step-1">Buharlaşma ve Enerji Aktarımı</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="step-2">Yoğuşma ve Bulut Oluşumu</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="step-3">Yağış Mekanizması</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="step-4">Yüzey Akışı ve Sızma</div>
+      <div class="progress-line"></div>
+      <div class="progress-step" id="step-5">Döngünün Devamı</div>
+    </div>
+
+    <!-- Info Box (Right Side) -->
+    <div class="info-box" id="info-box">
+      <h3 id="info-title">Bilimsel Açıklama Paneli</h3>
+      <div class="info-content">
+        <div class="info-section">
+          <h4>Kavramlar</h4>
+          <p id="info-kavramlar">-</p>
+        </div>
+        <div class="info-section">
+          <h4>Süreç Açıklaması</h4>
+          <p id="info-surec">-</p>
+        </div>
+        <div class="info-section">
+          <h4>Gerçek Yaşam Bağlantısı</h4>
+          <p id="info-yasam">-</p>
+        </div>
+        <div class="info-section">
+          <h4>Ders Kazanımı</h4>
+          <p id="info-kazanim">-</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subtitles and Navigation (Bottom) -->
+    <div class="bottom-bar">
+      <div class="subtitle-box">
+        <p id="subtitle-text">Anlatım metni yükleniyor...</p>
+      </div>
+      <div class="controls">
+        <button id="sound-btn" class="icon-btn" title="Sesi Kapat">🔊</button>
+        <button id="next-btn" class="primary-btn">Sonraki Aşama</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz Overlay -->
+  <div id="quiz-ui" class="overlay hidden">
+    <div class="quiz-box">
+      <h2>Bölüm Sonu Değerlendirmesi</h2>
+      <div id="quiz-content">
+        <p id="question-text">Soru metni</p>
+        <div class="options" id="quiz-options">
+          <!-- Options injected via JS -->
+        </div>
+      </div>
+      <div id="quiz-result" class="hidden">
+        <h3 id="score-text">Puanınız: 0/5</h3>
+        <p id="feedback-text">Geri bildirim metni.</p>
+        <button id="restart-btn" class="primary-btn">Simülasyonu Tekrar Başlat</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>
